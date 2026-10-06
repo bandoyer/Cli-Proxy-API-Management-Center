@@ -35,6 +35,8 @@ export type ClaudeQuotaData = {
   windows: ClaudeQuotaWindow[];
   extraUsage?: ClaudeExtraUsage | null;
   planType?: string | null;
+  /** The profile's `organization.rate_limit_tier`, e.g. `default_claude_max_20x`. */
+  rateLimitTier?: string | null;
 };
 
 const findFableUsageLimit = (payload: ClaudeUsagePayload) => {
@@ -154,6 +156,19 @@ export const resolveClaudePlanType = (profile: ClaudeProfileResponse | null): st
   return null;
 };
 
+/** Plan label key with the Max tier from `rate_limit_tier` ("Max 20x"), when known. */
+export const resolveClaudePlanLabelKey = (
+  planType: string | null | undefined,
+  rateLimitTier: string | null | undefined
+): string | null => {
+  if (!planType) return null;
+  if (planType === 'plan_max') {
+    const multiplier = normalizeStringValue(rateLimitTier)?.match(/max_(\d+)x$/i)?.[1];
+    if (multiplier === '5' || multiplier === '20') return `claude_quota.plan_max${multiplier}`;
+  }
+  return `claude_quota.${planType}`;
+};
+
 const fetchClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<ClaudeQuotaData> => {
   const rawAuthIndex = file['auth_index'] ?? file.authIndex;
   const authIndex = normalizeAuthIndex(rawAuthIndex);
@@ -192,16 +207,19 @@ const fetchClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<Claud
   }
 
   const windows = buildClaudeQuotaWindows(payload, t);
-  const planType =
+  const profile =
     profileResult.status === 'fulfilled' &&
     profileResult.value.statusCode >= 200 &&
     profileResult.value.statusCode < 300
-      ? resolveClaudePlanType(
-          parseClaudeProfilePayload(profileResult.value.body ?? profileResult.value.bodyText)
-        )
+      ? parseClaudeProfilePayload(profileResult.value.body ?? profileResult.value.bodyText)
       : null;
 
-  return { windows, extraUsage: payload.extra_usage, planType };
+  return {
+    windows,
+    extraUsage: payload.extra_usage,
+    planType: resolveClaudePlanType(profile),
+    rateLimitTier: normalizeStringValue(profile?.organization?.rate_limit_tier),
+  };
 };
 
 export const CLAUDE_CONFIG: QuotaProviderData<ClaudeQuotaState, ClaudeQuotaData> = {
@@ -217,6 +235,7 @@ export const CLAUDE_CONFIG: QuotaProviderData<ClaudeQuotaState, ClaudeQuotaData>
     windows: data.windows,
     extraUsage: data.extraUsage,
     planType: data.planType,
+    rateLimitTier: data.rateLimitTier,
   }),
   buildErrorState: (message, status) => ({
     status: 'error',

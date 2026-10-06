@@ -178,6 +178,8 @@ export interface ClaudeQuotaState {
   windows: ClaudeQuotaWindow[];
   extraUsage?: ClaudeExtraUsage | null;
   planType?: string | null;
+  /** The profile's `organization.rate_limit_tier`, for the "Max 20x" plan label. */
+  rateLimitTier?: string | null;
   error?: string;
   errorStatus?: number;
 }
