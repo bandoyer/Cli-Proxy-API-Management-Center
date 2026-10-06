@@ -36,6 +36,7 @@ import {
   createStatusError,
   isCodexFile,
   isDisabledAuthFile,
+  PREMIUM_CODEX_PLAN_TYPES,
 } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/authIndex';
 import type { QuotaProviderData } from '../types';
@@ -517,6 +518,21 @@ const consumeCodexRateLimitResetCredit = async (
 const resetCodexQuota = async (file: AuthFileItem, t: TFunction): Promise<CodexQuotaData> => {
   await consumeCodexRateLimitResetCredit(file, t);
   return fetchCodexQuota(file, t);
+};
+
+/** Display label for a Codex plan type, shared by the quota card and the ledger. */
+export const getCodexPlanLabel = (planType: string | null | undefined, t: TFunction) => {
+  const normalized = normalizePlanType(planType);
+  if (!normalized) return null;
+  if (normalized === 'self_serve_business_prolite') {
+    return t('codex_quota.plan_business_premium');
+  }
+  if (normalized === 'pro') return t('codex_quota.plan_pro');
+  if (PREMIUM_CODEX_PLAN_TYPES.has(normalized)) return t('codex_quota.plan_prolite');
+  if (normalized === 'plus') return t('codex_quota.plan_plus');
+  if (normalized === 'team') return t('codex_quota.plan_team');
+  if (normalized === 'free') return t('codex_quota.plan_free');
+  return planType || normalized;
 };
 
 export const CODEX_CONFIG: QuotaProviderData<CodexQuotaState, CodexQuotaData> = {

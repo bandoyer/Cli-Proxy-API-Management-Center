@@ -201,17 +201,20 @@ const withSubscriptionPlan = (
   return { ...summary, planLabel: plan.label, planTier: plan.tier };
 };
 
-const fetchXaiQuota = async (file: AuthFileItem, t: TFunction): Promise<XaiBillingSummary> => {
-  const rawAuthIndex = file['auth_index'] ?? file.authIndex;
-  const authIndex = normalizeAuthIndex(rawAuthIndex);
+const requireXaiAuthIndex = (file: AuthFileItem, t: TFunction): string => {
+  const authIndex = normalizeAuthIndex(file['auth_index'] ?? file.authIndex);
   if (!authIndex) {
     throw new Error(t('xai_quota.missing_auth_index'));
   }
+  return authIndex;
+};
 
-  if (isPaidXaiAuthFile(file)) {
-    return requestXaiPaidHealth(authIndex);
-  }
-
+/** Weekly and monthly billing reads; the summary, or the error to report. */
+const requestXaiBillingSummary = async (
+  file: AuthFileItem,
+  authIndex: string,
+  t: TFunction
+): Promise<{ summary: XaiBillingSummary } | { error: unknown }> => {
   const requestHeader = buildXaiRequestHeaders(file);
   const [weeklyResult, monthlyResult] = await Promise.allSettled([
     requestXaiBilling(authIndex, XAI_BILLING_WEEKLY_URL, requestHeader),
@@ -220,18 +223,43 @@ const fetchXaiQuota = async (file: AuthFileItem, t: TFunction): Promise<XaiBilli
   const weeklySummary = weeklyResult.status === 'fulfilled' ? weeklyResult.value : null;
   const monthlySummary = monthlyResult.status === 'fulfilled' ? monthlyResult.value : null;
   const summary = mergeXaiBillingSummaries(weeklySummary, monthlySummary);
-  if (summary) return summary;
+  if (summary) return { summary };
+  return {
+    error:
+      weeklyResult.status === 'rejected' && monthlyResult.status === 'rejected'
+        ? weeklyResult.reason
+        : new Error(t('xai_quota.empty_data')),
+  };
+};
 
-  const billingError =
-    weeklyResult.status === 'rejected' && monthlyResult.status === 'rejected'
-      ? weeklyResult.reason
-      : new Error(t('xai_quota.empty_data'));
+/**
+ * Billing endpoint only, for loads the user did not click. It spends nothing:
+ * no chat-completion health check, for paid credentials or on billing failure.
+ */
+export const fetchXaiBillingQuota = async (
+  file: AuthFileItem,
+  t: TFunction
+): Promise<XaiBillingSummary> => {
+  const billing = await requestXaiBillingSummary(file, requireXaiAuthIndex(file, t), t);
+  if ('summary' in billing) return billing.summary;
+  throw billing.error;
+};
+
+const fetchXaiQuota = async (file: AuthFileItem, t: TFunction): Promise<XaiBillingSummary> => {
+  const authIndex = requireXaiAuthIndex(file, t);
+
+  if (isPaidXaiAuthFile(file)) {
+    return requestXaiPaidHealth(authIndex);
+  }
+
+  const billing = await requestXaiBillingSummary(file, authIndex, t);
+  if ('summary' in billing) return billing.summary;
 
   try {
     return await requestXaiPaidHealth(authIndex);
   } catch {
     // Preserve the original free billing error when neither account mode can be queried.
-    throw billingError;
+    throw billing.error;
   }
 };
 

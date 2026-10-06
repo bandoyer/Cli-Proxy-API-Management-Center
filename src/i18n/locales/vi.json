@@ -1540,7 +1540,28 @@
     "search_placeholder": "Tìm theo tên file hoặc email",
     "search_empty_title": "Không có tài khoản phù hợp",
     "search_empty_desc": "Hãy thử tên file hoặc email khác, hoặc xóa tìm kiếm.",
-    "search_clear": "Xóa tìm kiếm"
+    "search_clear": "Xóa tìm kiếm",
+    "ledger": {
+      "of_total": "trên {{total}}%",
+      "show": "Hiện",
+      "hide": "Ẩn",
+      "no_reset": "Không có lần đặt lại nào đang chờ",
+      "no_readings": "Chưa tải dữ liệu quota",
+      "total_left": "tổng còn lại",
+      "headline": "Cửa sổ chính",
+      "renews": "gia hạn {{when}}",
+      "renewal_day_set": "Đặt ngày gia hạn",
+      "renewal_day_edit": "Sửa ngày gia hạn",
+      "renewal_day_label": "Ngày gia hạn trong tháng (1-31)",
+      "renewal_day_invalid": "Nhập số nguyên từ 1 đến 31, hoặc để trống để xóa.",
+      "renewal_day_saved": "Đã lưu ngày gia hạn cho {{name}}",
+      "renewal_day_cleared": "Đã xóa ngày gia hạn cho {{name}}",
+      "renewal_day_failed": "Không lưu được ngày gia hạn cho {{name}}: {{message}}",
+      "clear": "Xóa",
+      "available": "khả dụng",
+      "first_expiry": "Hết hạn sớm nhất",
+      "monthly_limit": "Giới hạn hằng tháng"
+    }
   },
   "plugin_management": {
     "title": "Quản lý Plugin",

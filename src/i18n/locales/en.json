@@ -1583,7 +1583,28 @@
     "weekday_wed": "Wed",
     "weekday_thu": "Thu",
     "weekday_fri": "Fri",
-    "weekday_sat": "Sat"
+    "weekday_sat": "Sat",
+    "ledger": {
+      "of_total": "of {{total}}%",
+      "show": "Show",
+      "hide": "Hide",
+      "no_reset": "No reset pending",
+      "no_readings": "No quota readings loaded",
+      "total_left": "total left",
+      "headline": "Headline",
+      "renews": "renews {{when}}",
+      "renewal_day_set": "Set renewal day",
+      "renewal_day_edit": "Edit renewal day",
+      "renewal_day_label": "Renewal day of the month (1-31)",
+      "renewal_day_invalid": "Enter a whole day from 1 to 31, or leave it empty to clear it.",
+      "renewal_day_saved": "Saved the renewal day for {{name}}",
+      "renewal_day_cleared": "Cleared the renewal day for {{name}}",
+      "renewal_day_failed": "Failed to save the renewal day for {{name}}: {{message}}",
+      "clear": "Clear",
+      "available": "available",
+      "first_expiry": "First expires",
+      "monthly_limit": "Monthly limit"
+    }
   },
   "plugin_management": {
     "title": "Plugin Management",
