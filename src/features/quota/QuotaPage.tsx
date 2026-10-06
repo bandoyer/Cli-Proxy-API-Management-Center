@@ -1,8 +1,11 @@
 /**
- * 额度查询页：提供商 tabs + 统一卡网格。
+ * Quota page: provider tabs, then the quota ledger (summary cards over provider
+ * panels) for Claude, Codex and xAI, then stock cards for the other providers.
  *
- * 保留的行为契约（重设计不改）：
- * - 现有提供商保持点击加载；Devin 首次可见时主动查询一次，不轮询；
+ * Behavior contracts kept from the stock page:
+ * - Opening the page loads every Claude, Codex and xAI reading once (xAI from
+ *   billing only, see ledger/autoLoad.ts); other providers stay click-to-load;
+ *   Devin queries once when first visible and does not poll;
  * - cacheGeneration 会话隔离 + request-id 去重（见 useQuotaBatchLoader）；
  * - 文件列表变化后按 provider 剪枝额度缓存（已删文件不残留）；
  * - useHeaderRefresh 单槽位：本页唯一注册者，全局刷新 = 重取文件列表。
@@ -19,7 +22,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useNow } from '@/hooks/useNow';
 import { useRevealGroup } from '@/hooks/motion';
-import { useAuthStore, useQuotaStore, useThemeStore } from '@/stores';
+import { useAuthStore, useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { AuthFileItem, ResolvedTheme } from '@/types';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
@@ -50,6 +53,9 @@ import type { QuotaProviderType } from './providers/types';
 import { useDevinQuotaAutoLoad } from './providers/devin/useDevinQuotaAutoLoad';
 import { useQuotaActions } from './hooks/useQuotaActions';
 import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
+import { LEDGER_AUTO_LOAD_ADAPTERS, selectLedgerAutoLoad } from './ledger/autoLoad';
+import { LEDGER_PROVIDERS } from './ledger/model';
+import { QuotaLedger } from './ledger/QuotaLedger';
 import { readQuotaUiState, writeQuotaUiState } from './uiState';
 import styles from './QuotaPage.module.scss';
 
@@ -61,6 +67,15 @@ const SKELETON_CARD_COUNT = 6;
  * identity-aware display label. Keep the filename fallback stable for memoization.
  */
 const displayNameFor = (name: string) => name;
+
+const isLedgerEntry = (entry: QuotaFileEntry) => LEDGER_PROVIDERS.includes(entry.type);
+
+const withRenewalDay = (file: AuthFileItem, day: number | null): AuthFileItem => {
+  const next: AuthFileItem = { ...file };
+  if (day === null) delete next.renewal_day;
+  else next.renewal_day = day;
+  return next;
+};
 
 export function QuotaPage() {
   const { t } = useTranslation();
@@ -182,9 +197,20 @@ export function QuotaPage() {
     [filteredEntries, sortMode, resolveNextRecovery]
   );
 
+  // Ledger providers are listed in full (the totals need every credential);
+  // only the stock cards of the other providers are paginated.
+  const ledgerEntries = useMemo(() => sortedEntries.filter(isLedgerEntry), [sortedEntries]);
+  const otherEntries = useMemo(
+    () => sortedEntries.filter((entry) => !isLedgerEntry(entry)),
+    [sortedEntries]
+  );
   const { pageItems, currentPage, totalPages } = useMemo(
-    () => paginate(sortedEntries, page, QUOTA_PAGE_SIZE),
-    [sortedEntries, page]
+    () => paginate(otherEntries, page, QUOTA_PAGE_SIZE),
+    [otherEntries, page]
+  );
+  const visibleEntries = useMemo(
+    () => [...ledgerEntries, ...pageItems],
+    [ledgerEntries, pageItems]
   );
 
   const handleTabChange = useCallback((next: string) => {
@@ -274,9 +300,17 @@ export function QuotaPage() {
         disableControls
       )
     ) {
-      void loadQuota(pageItems);
+      void loadQuota(visibleEntries);
     }
-  }, [disableControls, error, filesGeneration, loading, loadQuota, pageItems, sessionGeneration]);
+  }, [
+    disableControls,
+    error,
+    filesGeneration,
+    loading,
+    loadQuota,
+    visibleEntries,
+    sessionGeneration,
+  ]);
 
   useDevinQuotaAutoLoad(
     pageItems,
@@ -289,6 +323,67 @@ export function QuotaPage() {
   );
 
   const canUseActions = !disableControls && !loading && filesGeneration === sessionGeneration;
+
+  // The summary cards need every ledger reading: load each one not requested yet.
+  // At most once per credential and session, so a dropped commit (a credential
+  // edited mid-load) cannot turn into a loop against rate-limited usage endpoints.
+  const autoLoadedRef = useRef<{ session: number; keys: Set<string> }>({
+    session: sessionGeneration,
+    keys: new Set(),
+  });
+  useEffect(() => {
+    if (!canUseActions || batchLoading || error) return;
+    if (autoLoadedRef.current.session !== sessionGeneration) {
+      autoLoadedRef.current = { session: sessionGeneration, keys: new Set() };
+    }
+    const attempted = autoLoadedRef.current.keys;
+    const keyOf = (entry: QuotaFileEntry) => `${entry.type}:${getQuotaCacheKey(entry.file)}`;
+    const targets = selectLedgerAutoLoad(entries, getQuota).filter(
+      (entry) => !attempted.has(keyOf(entry))
+    );
+    if (targets.length === 0) return;
+    targets.forEach((entry) => attempted.add(keyOf(entry)));
+    void loadQuota(targets, LEDGER_AUTO_LOAD_ADAPTERS).then((started) => {
+      // Another batch was running; batchLoading's falling edge retries these.
+      if (!started) targets.forEach((entry) => attempted.delete(keyOf(entry)));
+    });
+  }, [canUseActions, batchLoading, error, entries, getQuota, loadQuota, sessionGeneration]);
+
+  /* ---------- 续订日 ---------- */
+
+  const showNotification = useNotificationStore((state) => state.showNotification);
+  const saveRenewalDay = useCallback(
+    async (entry: QuotaFileEntry, day: number | null): Promise<boolean> => {
+      const name = entry.file.name;
+      const isCurrent = () => sessionGeneration === useQuotaStore.getState().cacheGeneration;
+      try {
+        await authFilesApi.patchFields(name, { renewal_day: day });
+        if (!isCurrent()) return false;
+        setFiles((prev) =>
+          prev.map((file) => (file.name === name ? withRenewalDay(file, day) : file))
+        );
+        showNotification(
+          t(
+            day === null
+              ? 'quota_management.ledger.renewal_day_cleared'
+              : 'quota_management.ledger.renewal_day_saved',
+            { name }
+          ),
+          'success'
+        );
+        return true;
+      } catch (err: unknown) {
+        if (!isCurrent()) return false;
+        const message = err instanceof Error ? err.message : t('common.unknown_error');
+        showNotification(
+          t('quota_management.ledger.renewal_day_failed', { name, message }),
+          'error'
+        );
+        return false;
+      }
+    },
+    [sessionGeneration, showNotification, t]
+  );
 
   /* ---------- 首屏卡片一次性级联入场 ----------
    * 首批数据渲染后立即翻转 cardsAnimated；已挂载的卡片在挂载时捕获过自己的
@@ -311,6 +406,9 @@ export function QuotaPage() {
   /* ---------- 渲染 ---------- */
 
   const isEmpty = !loading && filteredEntries.length === 0;
+  const refreshEntry = (entry: QuotaFileEntry) =>
+    void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type]);
+  const resetEntry = (entry: QuotaFileEntry) => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type]);
 
   return (
     <div className={styles.page} ref={revealRef}>
@@ -414,24 +512,38 @@ export function QuotaPage() {
             }
           />
         ) : (
-          <div className={styles.grid}>
-            {pageItems.map((entry, index) => (
-              <QuotaCard
-                key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
-                entry={entry}
-                quota={getQuota(entry)}
-                resolvedTheme={resolvedTheme}
-                canRefresh={canUseActions && !entry.file.disabled}
-                resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
-                entranceDelayMs={cardEntranceDelay(index)}
-                onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-                onReset={() => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-              />
-            ))}
-          </div>
+          <>
+            <QuotaLedger
+              entries={ledgerEntries}
+              getQuota={getQuota}
+              resolvedTheme={resolvedTheme}
+              canRefresh={canUseActions}
+              resettingQuotaName={resettingQuotaName}
+              onRefresh={refreshEntry}
+              onReset={resetEntry}
+              onSaveRenewalDay={saveRenewalDay}
+            />
+            {pageItems.length > 0 && (
+              <div className={styles.grid}>
+                {pageItems.map((entry, index) => (
+                  <QuotaCard
+                    key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
+                    entry={entry}
+                    quota={getQuota(entry)}
+                    resolvedTheme={resolvedTheme}
+                    canRefresh={canUseActions && !entry.file.disabled}
+                    resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
+                    entranceDelayMs={cardEntranceDelay(index)}
+                    onRefresh={() => refreshEntry(entry)}
+                    onReset={() => resetEntry(entry)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {!loading && filteredEntries.length > QUOTA_PAGE_SIZE && (
+        {!loading && otherEntries.length > QUOTA_PAGE_SIZE && (
           <div className={styles.pagination}>
             <Button
               variant="secondary"
@@ -445,7 +557,7 @@ export function QuotaPage() {
               {t('auth_files.pagination_info', {
                 current: currentPage,
                 total: totalPages,
-                count: filteredEntries.length,
+                count: otherEntries.length,
               })}
             </div>
             <Button
@@ -459,9 +571,9 @@ export function QuotaPage() {
           </div>
         )}
 
-        {/* 时间线只比较当前页凭证，避免大量凭证一次性生成无界泳道。 */}
+        {/* The timeline compares visible credentials only, so lanes stay bounded. */}
         <QuotaTimeline
-          entries={pageItems}
+          entries={visibleEntries}
           quotaFor={getQuota}
           displayNameFor={displayNameFor}
           resolvedTheme={resolvedTheme}

@@ -1586,7 +1586,28 @@
     "weekday_wed": "Ср",
     "weekday_thu": "Чт",
     "weekday_fri": "Пт",
-    "weekday_sat": "Сб"
+    "weekday_sat": "Сб",
+    "ledger": {
+      "of_total": "из {{total}}%",
+      "show": "Показать",
+      "hide": "Скрыть",
+      "no_reset": "Сброс не ожидается",
+      "no_readings": "Данные о квоте не загружены",
+      "total_left": "всего осталось",
+      "headline": "Главное окно",
+      "renews": "продление {{when}}",
+      "renewal_day_set": "Указать день продления",
+      "renewal_day_edit": "Изменить день продления",
+      "renewal_day_label": "День продления в месяце (1-31)",
+      "renewal_day_invalid": "Введите целое число от 1 до 31 или оставьте поле пустым, чтобы очистить его.",
+      "renewal_day_saved": "День продления для {{name}} сохранён",
+      "renewal_day_cleared": "День продления для {{name}} очищен",
+      "renewal_day_failed": "Не удалось сохранить день продления для {{name}}: {{message}}",
+      "clear": "Очистить",
+      "available": "доступно",
+      "first_expiry": "Первый истекает",
+      "monthly_limit": "Месячный лимит"
+    }
   },
   "plugin_management": {
     "title": "Управление плагинами",

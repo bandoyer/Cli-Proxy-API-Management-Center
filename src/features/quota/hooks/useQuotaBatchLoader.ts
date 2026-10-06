@@ -14,7 +14,12 @@ import { captureQuotaCacheGeneration, commitIfQuotaCacheCurrent } from '@/stores
 import { getStatusFromError } from '@/utils/quota';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
 import type { QuotaFileEntry } from '../logic';
-import { QUOTA_ADAPTERS, getQuotaSetter, type QuotaCardState } from '../providers';
+import {
+  QUOTA_ADAPTERS,
+  getQuotaSetter,
+  type QuotaAdapter,
+  type QuotaCardState,
+} from '../providers';
 import { enrichQuotaInBackground } from '../quotaEnrichment';
 import type { QuotaProviderType } from '../providers/types';
 
@@ -34,9 +39,13 @@ export function useQuotaBatchLoader() {
   const requestIdRef = useRef(0);
 
   const loadQuota = useCallback(
-    async (targets: QuotaFileEntry[]) => {
-      if (loadingRef.current) return;
-      if (targets.length === 0) return;
+    async (
+      targets: QuotaFileEntry[],
+      adapters: Record<QuotaProviderType, QuotaAdapter> = QUOTA_ADAPTERS
+    ): Promise<boolean> => {
+      // Resolves false when nothing was loaded because another batch is running.
+      if (loadingRef.current) return false;
+      if (targets.length === 0) return true;
       loadingRef.current = true;
       const requestId = ++requestIdRef.current;
       const cacheGeneration = captureQuotaCacheGeneration();
@@ -52,7 +61,7 @@ export function useQuotaBatchLoader() {
 
         await Promise.all(
           Array.from(groups.entries()).map(async ([type, entries]) => {
-            const adapter = QUOTA_ADAPTERS[type];
+            const adapter = adapters[type];
             const setQuota = getQuotaSetter(adapter);
 
             commitIfQuotaCacheCurrent(cacheGeneration, () => {
@@ -121,6 +130,7 @@ export function useQuotaBatchLoader() {
           loadingRef.current = false;
         }
       }
+      return true;
     },
     [t]
   );

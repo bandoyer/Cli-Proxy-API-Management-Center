@@ -1,0 +1,348 @@
+/* Quota ledger: summary cards over provider panels. Bars reuse QuotaBody's meter. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.muted {
+  color: var(--text-tertiary);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.error {
+  color: var(--viz-failure);
+  font-size: 13px;
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* ---------- numbers and times ---------- */
+
+.when {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.bigNumber {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  span {
+    font-size: 14px;
+    font-weight: 400;
+  }
+}
+
+.midNumber {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  span {
+    font-size: 12px;
+    font-weight: 400;
+  }
+}
+
+/* Same bar and colours as QuotaBody's meter (>= 70 green, >= 30 amber, below red). */
+.quotaBar {
+  height: 6px;
+  border-radius: $radius-full;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  overflow: hidden;
+}
+
+.quotaBarFill {
+  height: 100%;
+  border-radius: $radius-full;
+  transition: width 360ms var(--ease-out-strong, ease);
+}
+
+.quotaBarFillHigh {
+  background: var(--viz-success);
+}
+
+.quotaBarFillMedium {
+  background: var(--quota-medium-color);
+}
+
+.quotaBarFillLow {
+  background: var(--viz-failure);
+}
+
+.segments {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.segment {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- buttons ---------- */
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover:not(:disabled) {
+    color: var(--text-primary);
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 14px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover:not(:disabled) {
+    color: var(--text-primary);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.spinning {
+  animation: ledger-spin 0.8s linear infinite;
+}
+
+@keyframes ledger-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
+
+/* ---------- summary cards ---------- */
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+}
+
+.summaryCard {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid var(--border-color);
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.summaryHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  strong {
+    font-size: 15px;
+  }
+
+  > span:last-child {
+    margin-left: auto;
+    font-size: 12.5px;
+  }
+}
+
+.summaryOthers {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.summaryOtherList {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* ---------- provider panels ---------- */
+
+.panel {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+}
+
+.panelGrid {
+  display: grid;
+  align-items: center;
+}
+
+.panelHeadCell {
+  padding: 16px 14px;
+  font-size: 13px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.headlineCol {
+  box-shadow: inset 0 3px 0 var(--primary-color);
+}
+
+.headlineBadge {
+  font-size: 11px;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.panelRow {
+  display: contents;
+
+  > * {
+    padding: 14px;
+    border-bottom: 1px solid var(--border-color);
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+}
+
+.nameCell {
+  min-width: 0;
+}
+
+.fileName {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan {
+  font-size: 12.5px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+.renewalEdit {
+  margin-left: 8px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.renewalForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.renewalInput {
+  width: 64px;
+  padding: 3px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.windowCell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.windowHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.windowLabel {
+  color: var(--text-secondary);
+}
+
+.windowPct {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

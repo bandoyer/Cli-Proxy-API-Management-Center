@@ -45,6 +45,8 @@ export type AuthFileFieldsPatch = {
   websockets?: boolean;
   using_api?: boolean;
   note?: string;
+  /** Day of the month the subscription renews, 1-31; null clears it. */
+  renewal_day?: number | null;
   excluded_models?: string[];
   'excluded-models'?: string[];
   expired?: string;

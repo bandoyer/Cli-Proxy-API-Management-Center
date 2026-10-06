@@ -1607,7 +1607,28 @@
     "weekday_wed": "三",
     "weekday_thu": "四",
     "weekday_fri": "五",
-    "weekday_sat": "六"
+    "weekday_sat": "六",
+    "ledger": {
+      "of_total": "/ {{total}}%",
+      "show": "展開",
+      "hide": "收起",
+      "no_reset": "暫無待重置",
+      "no_readings": "尚未載入配額資料",
+      "total_left": "合計剩餘",
+      "headline": "主視窗",
+      "renews": "{{when}}續訂",
+      "renewal_day_set": "設定續訂日",
+      "renewal_day_edit": "編輯續訂日",
+      "renewal_day_label": "每月續訂日（1-31）",
+      "renewal_day_invalid": "請輸入 1 到 31 的整數，留空則清除。",
+      "renewal_day_saved": "已儲存 {{name}} 的續訂日",
+      "renewal_day_cleared": "已清除 {{name}} 的續訂日",
+      "renewal_day_failed": "儲存 {{name}} 的續訂日失敗：{{message}}",
+      "clear": "清除",
+      "available": "可用",
+      "first_expiry": "最早到期",
+      "monthly_limit": "每月限額"
+    }
   },
   "plugin_management": {
     "title": "插件管理",
