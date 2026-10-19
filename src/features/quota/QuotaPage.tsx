@@ -324,7 +324,8 @@ export function QuotaPage() {
 
   const canUseActions = !disableControls && !loading && filesGeneration === sessionGeneration;
 
-  // The summary cards need every ledger reading: load each one not requested yet.
+  // The summary cards need every ledger reading, and Muse loads with them: load
+  // each one not requested yet.
   // At most once per credential and session, so a dropped commit (a credential
   // edited mid-load) cannot turn into a loop against rate-limited usage endpoints.
   const autoLoadedRef = useRef<{ session: number; keys: Set<string> }>({

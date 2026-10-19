@@ -53,6 +53,7 @@ describe('Muse quota UI integration', () => {
         'download_failed',
         'stale_request',
         'empty_data',
+        'no_usage_window',
         'request_failed',
         'invalid_response',
         'plan',
@@ -110,17 +111,17 @@ describe('Muse quota UI integration', () => {
     expect(markup).toContain('Muse Code Everyday Usage');
     expect(markup).toContain('aria-valuenow="98"');
     expect(markup).toContain('aria-valuenow="100"');
-    expect(markup).not.toContain(i18n.t('meta_quota.empty_data'));
+    expect(markup).not.toContain(i18n.t('meta_quota.no_usage_window'));
     expect(markup).not.toContain('fixture@example.invalid');
     expect(markup).not.toContain('LLM|');
   });
 
-  test('missing usage shows unknown windows and a first-request hint, not full meters', () => {
+  test('missing usage shows unknown windows and a no-usage hint, not full meters', () => {
     const data = parseMetaQuotaPayload({ api_key: 'LLM|fixture-only' })!;
     const quota = META_CONFIG.buildSuccessState(data);
     expect(quota.status).toBe('success');
     const markup = renderToStaticMarkup(createElement(MetaQuotaBody, { quota, classes }));
-    expect(markup).toContain(i18n.t('meta_quota.empty_data'));
+    expect(markup).toContain(i18n.t('meta_quota.no_usage_window'));
     expect(markup).toContain(i18n.t('meta_quota.window'));
     expect(markup).toContain(i18n.t('meta_quota.weekly'));
     expect(markup).toContain(i18n.t('meta_quota.unknown'));

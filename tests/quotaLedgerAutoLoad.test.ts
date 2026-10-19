@@ -21,7 +21,7 @@ const entry = (type: QuotaFileEntry['type'], name = `${type}.json`): QuotaFileEn
   file: { name, type, auth_index: `${type}:1` },
 });
 
-describe('opening the page loads every Claude, Codex and xAI quota reading once', () => {
+describe('opening the page loads every Claude, Codex, xAI and Muse quota reading once', () => {
   test('selects only credentials whose reading is not loaded yet', () => {
     const entries = [
       entry('claude', 'claude-idle.json'),
@@ -30,6 +30,7 @@ describe('opening the page loads every Claude, Codex and xAI quota reading once'
       entry('codex', 'codex-idle.json'),
       entry('xai', 'xai-idle.json'),
       entry('xai', 'xai-loading.json'),
+      entry('meta', 'meta-idle.json'),
       entry('kimi', 'kimi-idle.json'),
       entry('devin', 'devin-idle.json'),
     ];
@@ -45,6 +46,7 @@ describe('opening the page loads every Claude, Codex and xAI quota reading once'
       'claude-idle.json',
       'codex-idle.json',
       'xai-idle.json',
+      'meta-idle.json',
     ]);
   });
 });

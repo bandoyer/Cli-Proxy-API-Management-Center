@@ -475,9 +475,16 @@ export function buildXaiBillingSummary(
   const summary = emptyXaiBillingSummary();
   const currentPeriod = config.currentPeriod ?? config.current_period ?? null;
   const periodType = resolveXaiPeriodType(currentPeriod);
-  const creditUsagePercent = normalizeNumberValue(
-    config.creditUsagePercent ?? config.credit_usage_percent
-  );
+  // xAI leaves creditUsagePercent out while the credit period's usage rounds to
+  // 0%, so a credit period without the field is 0% used. A present value that is
+  // not a number stays unknown.
+  const rawCreditUsagePercent = config.creditUsagePercent ?? config.credit_usage_percent;
+  const creditUsagePercent =
+    rawCreditUsagePercent === undefined || rawCreditUsagePercent === null
+      ? currentPeriod
+        ? 0
+        : null
+      : normalizeNumberValue(rawCreditUsagePercent);
   const periodStart =
     normalizeStringValue(currentPeriod?.start) ??
     normalizeStringValue(config.billingPeriodStart ?? config.billing_period_start) ??
