@@ -2212,6 +2212,7 @@
     "load_failed": "Truy vấn quota thất bại: {{message}}",
     "missing_auth_index": "File xác thực thiếu auth_index",
     "empty_data": "Quota không xác định. Có thể bạn chưa thực hiện yêu cầu model nào.",
+    "no_usage_window": "Chưa có mức sử dụng trong khung này. Muse sẽ báo quota sau yêu cầu tiếp theo.",
     "invalid_response": "Muse trả về phản hồi quota không hợp lệ.",
     "request_failed": "Yêu cầu quota Muse thất bại. Hãy kiểm tra xem credential DCA có hợp lệ không.",
     "missing_file": "Tra cứu quota yêu cầu file xác thực Meta có thể tải xuống.",

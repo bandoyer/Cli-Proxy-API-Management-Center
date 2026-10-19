@@ -1,10 +1,11 @@
 /**
- * xAI quota body: unknown usage must not masquerade as a zero.
+ * xAI quota body: weekly usage xAI leaves out, and usage it reports badly.
  *
- * When the weekly endpoint omits creditUsagePercent the summary keeps
- * usagePercent null; the body should say the usage is unavailable and hide
- * the meter rather than render a fabricated "Used 0%". The legacy
- * zero-limit/zero-used monthly row is hidden only while weekly data exists.
+ * xAI omits creditUsagePercent while the weekly credit period's usage rounds
+ * to 0%, so the summary reads that period as 0% used. A malformed percentage
+ * keeps usagePercent null; the body then says the usage is unavailable and
+ * hides the meter. The legacy zero-limit/zero-used monthly row is hidden only
+ * while weekly data exists.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -90,16 +91,15 @@ describe('resolveXaiSubscriptionPlan', () => {
 });
 
 describe('XaiQuotaBody unavailable weekly usage', () => {
-  test('reports unavailable instead of a fabricated zero when usagePercent is missing', () => {
+  test('reads a credit period without creditUsagePercent as 0% used', () => {
     const quota = quotaFor(weeklyConfig(), monthlyConfig());
-    expect(quota.billing?.usagePercent).toBeNull();
+    expect(quota.billing?.usagePercent).toBe(0);
 
     const markup = render(quota);
 
-    expect(markup).toContain('Usage unavailable from xAI');
+    expect(markup).toContain('Used 0%');
     expect(markup).toContain(formatQuotaResetTime(WEEKLY_PERIOD_END));
-    expect(markup).not.toContain('Used --');
-    expect(markup).not.toContain('Used 0%');
+    expect(markup).not.toContain('Usage unavailable from xAI');
     // Zero-budget zero-used monthly row is hidden while weekly data exists.
     expect(markup).not.toContain('Monthly credits');
     expect(markup).not.toContain('$0.00 / $0.00');
@@ -136,12 +136,12 @@ describe('XaiQuotaBody unavailable weekly usage', () => {
     );
 
     expect(quota.billing?.periodType).toBe('weekly');
-    expect(quota.billing?.usagePercent).toBeNull();
+    expect(quota.billing?.usagePercent).toBe(0);
     expect(quota.billing?.usedPercent).toBe((used / 15000) * 100);
 
     const markup = render(quota);
     expect(markup).toContain('Monthly credits');
-    expect(markup).toContain('Usage unavailable from xAI');
+    expect(markup).toContain('Used 0%');
     expect(markup).toContain(formatQuotaResetTime(WEEKLY_PERIOD_END));
   });
 

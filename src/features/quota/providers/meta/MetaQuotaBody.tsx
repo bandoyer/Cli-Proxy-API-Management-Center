@@ -35,8 +35,9 @@ export function MetaQuotaBody({ quota, classes }: QuotaBodyProps<MetaQuotaState>
           )}
         </div>
       )}
+      {/* Muse can omit subs_usage until the next request opens a usage window. */}
       {data.windows.every((window) => window.usedPercent === null) && (
-        <div className={classes.quotaMessage}>{t('meta_quota.empty_data')}</div>
+        <div className={classes.quotaMessage}>{t('meta_quota.no_usage_window')}</div>
       )}
       {data.windows.map((window, index) => {
         const remaining = window.usedPercent === null ? null : 100 - window.usedPercent;
